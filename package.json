@@ -1,0 +1,9 @@
+{
+	"name": "dumbfiles",
+	"version": "0.0.1",
+	"description": "Dumb simple file share service with node.js",
+	"dependencies": {
+		"formidable": ">= 1.0.0"
+	},
+	"engine": ">= node 0.10.0"
+}

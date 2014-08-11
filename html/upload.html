@@ -1,0 +1,27 @@
+<html>
+	<head>
+		<title>Simple uploader</title>
+		<style>
+			body {
+				font-family: sans-serif;
+				margin: 0px;
+				padding: 0px;
+			}
+
+			.center {
+			  position: relative;
+			  top: 50%;
+			  transform: translateY(-50%);
+			  text-align: center;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="center">
+			<form action="/upload" enctype="multipart/form-data" method="post">
+				<input type="file" name="upload" multiple="multiple"> 
+				<input type="submit" value="Upload">
+			</form>
+		</div>
+	</body>
+</html>
