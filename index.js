@@ -50,7 +50,6 @@ if (!fs.existsSync(configuration.storagePath)) {
 
 http.createServer(function(req, res) {
 	if (req.url == '/upload' && req.method.toLowerCase() == 'post') {
-		// parse a file upload
 		var form = new formidable.IncomingForm();
 
 		form.parse(req, function(err, fields, files) {
@@ -70,8 +69,6 @@ http.createServer(function(req, res) {
 
 			var _html = uploadedHtml.toString().replace(/%URL%/g, '/'+destName).replace(/%DELETE_URL%/g, '/'+destName+'/'+deleteKey);
 			sendHtml(res, 200, _html);
-				// 'ok, <a href="/'+destName+'">File link</a>, ' +
-				// '<a href="/'+destName+'/'+deleteKey+'">Delete file</a>' 
 		});
 
 		return;
