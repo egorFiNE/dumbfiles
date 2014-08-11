@@ -4,9 +4,14 @@ var
 	formidable = require('formidable');
 
 var configuration = {
-	storagePath: __dirname+'/storage',
+	// where should we store the actual files
+	storagePath: __dirname+'/storage',  
+
+	// web port to bind to
 	webPort: 3000,
-	uploadFormPath: '/upload'
+
+	// if you want your file sharing service to be private - you can specify the URL of the hidden upload form URL here. Otherwise set to '/'
+	uploadFormPath: '/upload',
 };
 
 function randomString(len) {
