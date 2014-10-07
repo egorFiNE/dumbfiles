@@ -53,6 +53,11 @@ http.createServer(function(req, res) {
 		var form = new formidable.IncomingForm();
 
 		form.parse(req, function(err, fields, files) {
+			if (!files.upload) {
+		    sendHtml(res, 200, uploadHtml);
+				return;
+			}
+
 			var source = files.upload.path;
 			var sourceName = files.upload.name;
 
