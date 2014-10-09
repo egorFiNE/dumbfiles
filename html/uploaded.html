@@ -9,20 +9,35 @@
 			}
 
 			.center {
-			  position: relative;
-			  top: 50%;
-			  transform: translateY(-50%);
-			  text-align: center;
+				padding-top: 10%;
+				text-align: center;
 			}
 		</style>
 	</head>
 	<body>
 		<div class="center">
 			File link: <br/>
-			<a href="%URL%">%URL%</a>
+			<span id="fileLink"></span>
 			<br/><br/>
 			Delete link: <br/>
-			<a href="%DELETE_URL%">%DELETE_URL%</a>
+			<span id="deleteLink"></span>
 		</div>
+		<script>
+		var fileLink = '%URL%', deleteLink = '%DELETE_URL%';
+		var host = document.location.origin;
+
+		fileLink = host+fileLink;
+		deleteLink = host+deleteLink;
+
+		document.getElementById('fileLink').innerHTML = '<a href="'+fileLink+'">'+fileLink+'</a>';
+		document.getElementById('deleteLink').innerHTML = '<a href="'+deleteLink+'">'+deleteLink+'</a>';
+
+		// var t = document.getElementsByTagName('a');
+		// for (var i=0;i<t.length;i++) {
+		// 	console.log(t[i]);
+		// }
+		// // console.log(document.location);
+		</script>
+
 	</body>
 </html>
