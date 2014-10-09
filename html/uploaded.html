@@ -8,35 +8,51 @@
 				padding: 0px;
 			}
 
+			a:visited {
+				color: blue;
+			}
+			
 			.center {
 				padding-top: 10%;
 				text-align: center;
+			}
+			.line {
+				width: 400px;
+			}
+			.label {
+				text-align: right;
+				padding-right: 10px;
+				font-size: 90%;
 			}
 		</style>
 	</head>
 	<body>
 		<div class="center">
-			File link: <br/>
-			<span id="fileLink"></span>
-			<br/><br/>
-			Delete link: <br/>
-			<span id="deleteLink"></span>
+		<table style="margin-left: auto; margin-right: auto;">
+		<tr>
+			<td class="label" id="downloadLink"></td>
+			<td><input class="line" id="downloadInput"/></td>
+		</tr>
+		<tr>
+			<td class="label"  id="deleteLink"></td>
+			<td><input class="line" id="deleteInput"/></td>
+		</tr>
+		</table>
 		</div>
+
+
 		<script>
-		var fileLink = '%URL%', deleteLink = '%DELETE_URL%';
+		var downloadLink = '%URL%', deleteLink = '%DELETE_URL%';
 		var host = document.location.origin;
 
-		fileLink = host+fileLink;
+		downloadLink = host+downloadLink;
 		deleteLink = host+deleteLink;
 
-		document.getElementById('fileLink').innerHTML = '<a href="'+fileLink+'">'+fileLink+'</a>';
-		document.getElementById('deleteLink').innerHTML = '<a href="'+deleteLink+'">'+deleteLink+'</a>';
+		document.getElementById('downloadInput').value = downloadLink;
+		document.getElementById('deleteInput').value = deleteLink; 
 
-		// var t = document.getElementsByTagName('a');
-		// for (var i=0;i<t.length;i++) {
-		// 	console.log(t[i]);
-		// }
-		// // console.log(document.location);
+		document.getElementById('deleteLink').innerHTML = '<a href="'+deleteLink+'">'+deleteLink+'</a>';
+		document.getElementById('downloadLink').innerHTML = '<a href="'+downloadLink+'">'+downloadLink+'</a>';
 		</script>
 
 	</body>
