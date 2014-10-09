@@ -16,7 +16,7 @@ var configuration = {
 
 function randomString(len) {
 	var text = "";
-	var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	var possible = "0123456789";
 
 	for (var i=0; i < len; i++) {
 		text += possible.charAt(Math.floor(Math.random() * possible.length));
@@ -61,7 +61,7 @@ http.createServer(function(req, res) {
 			var source = files.upload.path;
 			var sourceName = files.upload.name;
 
-			var destName = randomString(8);
+			var destName = randomString(3)+'-'+randomString(3)+'-'+randomString(3);;
 			var destPath = configuration.storagePath + '/' + destName;
 
 			fs.writeFileSync(destPath, fs.readFileSync(source));
@@ -86,8 +86,8 @@ http.createServer(function(req, res) {
 		sendHtml(res, 200, indexHtml);
 		return;
 
-	} else if (req.url.length==9) {
-		var id = req.url.substr(1,8).replace(/\//g, '');
+	} else if (req.url.length==12) {
+		var id = req.url.substr(1,100).replace(/\//g, '');
 		var filePath = configuration.storagePath+'/'+id;
 		if (fs.existsSync(filePath)) {
 			var meta = JSON.parse(fs.readFileSync(filePath+'.meta').toString());
@@ -106,9 +106,9 @@ http.createServer(function(req, res) {
 
 		return;
 
-	} else if (req.url.length==26) {
-		var id = req.url.substr(1,8).replace(/\//g, '');
-		var deleteKey = req.url.substr(10,16);
+	} else if (req.url.length==29) {
+		var id = req.url.substr(1,11).replace(/\//g, '');
+		var deleteKey = req.url.substr(13,16);
 
 		var filePath = configuration.storagePath+'/'+id;
 		if (fs.existsSync(filePath)) {
