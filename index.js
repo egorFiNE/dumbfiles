@@ -123,7 +123,7 @@ http.createServer(function(req, res) {
 
 			res.writeHead(200, {
 				'content-type': 'application/octet-stream',
-				'content-disposition': 'inline; filename="' + meta.filename + '"',
+				'content-disposition': 'attachment; filename="' + meta.filename + '"',
 				'content-length': stat.size
 			});
 			res.end(fs.readFileSync(filePath));
