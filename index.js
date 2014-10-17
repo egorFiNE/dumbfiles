@@ -38,7 +38,6 @@ function expireFiles() {
 			var fullPath = configuration.storagePath+'/'+filename;
 			var stat = fs.statSync(fullPath);
 			var diffSeconds = Math.floor((now - stat.ctime.getTime())/1000);
-			console.log(diffSeconds);
 			if (diffSeconds>=configuration.expireFilesAfterSeconds) {
 				try {
 					fs.unlinkSync(fullPath);
