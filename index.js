@@ -12,6 +12,8 @@ var configuration = {
 
 	// if you want your file sharing service to be private - you can specify the URL of the hidden upload form URL here. Otherwise set to '/'
 	uploadFormPath: '/upload',
+
+	expireFilesAfterSeconds: 86400
 };
 
 function randomString(len) {
@@ -23,6 +25,31 @@ function randomString(len) {
 	}
 
 	return text;
+}
+
+function expireFiles() {
+	var now = new Date().getTime();
+	var files = fs.readdirSync(configuration.storagePath);
+	files.forEach(function(filename) {
+		if (filename.match(/\.meta$/)) {
+			return;
+		}
+		try { 
+			var fullPath = configuration.storagePath+'/'+filename;
+			var stat = fs.statSync(fullPath);
+			var diffSeconds = Math.floor((now - stat.ctime.getTime())/1000);
+			console.log(diffSeconds);
+			if (diffSeconds>=configuration.expireFilesAfterSeconds) {
+				try {
+					fs.unlinkSync(fullPath);
+					fs.unlinkSync(fullPath+'.meta');
+				} catch(e) {
+				}
+			}
+		} catch(e) {
+			// FIXME maybe tell something?
+		}
+	})
 }
 
 var indexHtml=fs.readFileSync(__dirname+'/html/index.html');
@@ -132,6 +159,8 @@ http.createServer(function(req, res) {
 		return;
 	}
 }).listen(configuration.webPort);
+
+setInterval(expireFiles, 10000);
 
 console.log("Listening on port %d", configuration.webPort);
 
