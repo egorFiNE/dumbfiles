@@ -1,11 +1,16 @@
-var 
+'use strict';
+
+const 
 	http = require('http'),
+	path = require('path'),
+	urlModule = require('url'),
 	fs = require('fs'),
+	crypto = require('crypto'),
 	formidable = require('formidable');
 
-var configuration = {
+const configuration = {
 	// where should we store the actual files
-	storagePath: __dirname+'/storage',  
+	storagePath: path.join(__dirname, 'storage'),
 
 	// web port to bind to
 	webPort: 3000,
@@ -13,14 +18,16 @@ var configuration = {
 	// if you want your file sharing service to be private - you can specify the URL of the hidden upload form URL here. Otherwise set to '/'
 	uploadFormPath: '/upload',
 
-	expireFilesAfterSeconds: 86400
+	expireFilesAfterSeconds: 86400,
+
+	deleteKeySecret: 'jkdghskzbvgndrv'
 };
 
 function randomString(len) {
-	var text = "";
-	var possible = "0123456789";
+	let text = "";
+	const possible = "123456789";
 
-	for (var i=0; i < len; i++) {
+	for (let i=0; i < len; i++) {
 		text += possible.charAt(Math.floor(Math.random() * possible.length));
 	}
 
@@ -28,38 +35,38 @@ function randomString(len) {
 }
 
 function expireFiles() {
-	var now = new Date().getTime();
-	var files = fs.readdirSync(configuration.storagePath);
-	files.forEach(function(filename) {
-		if (filename.match(/\.meta$/)) {
-			return;
-		}
-		try { 
-			var fullPath = configuration.storagePath+'/'+filename;
-			var stat = fs.statSync(fullPath);
-			var diffSeconds = Math.floor((now - stat.ctime.getTime())/1000);
-			if (diffSeconds>=configuration.expireFilesAfterSeconds) {
+	const now = new Date().getTime();
+
+	const files = fs.readdirSync(configuration.storagePath);
+	files.forEach(filename => {
+		try {
+			const fullPath = path.join(configuration.storagePath, filename);
+			const stat = fs.statSync(fullPath);
+			const diffSeconds = Math.floor((now - stat.ctime.getTime())/1000);
+			if (diffSeconds >= configuration.expireFilesAfterSeconds) {
 				try {
 					fs.unlinkSync(fullPath);
-					fs.unlinkSync(fullPath+'.meta');
 				} catch(e) {
+					// nothing
 				}
 			}
 		} catch(e) {
 			// FIXME maybe tell something?
 		}
-	})
+	});
 }
 
-var indexHtml=fs.readFileSync(__dirname+'/html/index.html');
-var uploadHtml=fs.readFileSync(__dirname+'/html/upload.html');
-var uploadedHtml=fs.readFileSync(__dirname+'/html/uploaded.html');
-var notFoundHtml=fs.readFileSync(__dirname+'/html/404.html');
-var deletedHtml=fs.readFileSync(__dirname+'/html/deleted.html');
+const indexHtml    = fs.readFileSync(path.join(__dirname, 'html/index.html'));
+const downloadHtml = fs.readFileSync(path.join(__dirname, 'html/download.html'));
+const uploadHtml   = fs.readFileSync(path.join(__dirname, 'html/upload.html'));
+const uploadedHtml = fs.readFileSync(path.join(__dirname, 'html/uploaded.html'));
+const notFoundHtml = fs.readFileSync(path.join(__dirname, 'html/404.html'));
+const deleteHtml   = fs.readFileSync(path.join(__dirname, 'html/delete.html'));
+const deletedHtml  = fs.readFileSync(path.join(__dirname, 'html/deleted.html'));
 
 function sendHtml(res, httpStatus, html) {
 	res.writeHead(httpStatus, {
-		'content-type': 'text/html',
+		'content-type': 'text/html; charset=utf-8',
 		'content-length': html.length
 	});
 	res.end(html);
@@ -69,94 +76,168 @@ function sendNotFound(res) {
 	sendHtml(res, 404, notFoundHtml);
 }
 
+function calculateHashFromFilename(filename) {
+	return crypto.createHmac('sha256', configuration.deleteKeySecret)
+		.update(filename)
+		.digest('hex')
+		.substr(0, 16);
+}
+
+function storeFile(sourcePath, filename) {
+	const randomID = randomString(9);
+	const destName = randomID + '-' + encodeURIComponent(filename);
+
+	const destPath = path.join(configuration.storagePath, destName);
+	fs.writeFileSync(destPath, fs.readFileSync(sourcePath));
+	fs.unlinkSync(sourcePath);
+
+	const deleteKey = calculateHashFromFilename(destName);
+
+	return {
+		fileKey: randomID,
+		deleteKey: deleteKey
+	};
+}
+
+function extractFileKeyFromURL(url) {
+	const elements = url.substr(1,102400).split('/');
+
+	elements.shift(); // remove "/d/";
+	if (elements.length==0) {
+		return null;
+	}
+
+	const fileKey = parseInt(elements[0], 10);
+
+	if (fileKey==0 || isNaN(fileKey) || fileKey<100000000 || fileKey>999999999999) {
+		return null;
+	}
+
+	let deleteKey = null;
+	if (elements.length == 2) {
+		deleteKey = elements[1];
+		if (!deleteKey.match(/^[0-9a-f]+$/)) {
+			return null;
+		}
+	}
+
+	return { fileKey, deleteKey };
+}
+
+function findFileByKey(key) {
+	const _filenamePrefix = key + '-';
+	const files = fs.readdirSync(configuration.storagePath).filter(name => {
+		return name.startsWith(_filenamePrefix);
+	});
+
+	if (files.length==0) {
+		return null;
+	}
+
+	const filename = files[0];
+	const downloadFilename = filename.substr(key.toString().length+1, 100000);
+
+	return { filename, downloadFilename };
+}
+
+/********************************************/
+
 if (!fs.existsSync(configuration.storagePath)) {
 	fs.mkdirSync(configuration.storagePath);
 }
 
 
-http.createServer(function(req, res) {
-	if (req.url == '/upload' && req.method.toLowerCase() == 'post') {
-		var form = new formidable.IncomingForm();
+http.createServer((req, res) => {
+	const urlParsed = urlModule.parse(req.url, true);
 
-		form.parse(req, function(err, fields, files) {
-			if (!files.upload) {
-		    sendHtml(res, 200, uploadHtml);
+	if (urlParsed.pathname == '/upload' && req.method.toLowerCase() == 'post') {
+		const form = new formidable.IncomingForm();
+
+		form.parse(req, (err, fields, files) => {
+			if (err || !files || !files.upload) {
+				sendHtml(res, 200, uploadHtml);
 				return;
 			}
 
-			var source = files.upload.path;
-			var sourceName = files.upload.name;
+			const sourceFilepath = files.upload.path;
+			const sourceFilename = files.upload.name;
 
-			var destName = randomString(3)+'-'+randomString(3)+'-'+randomString(3);;
-			var destPath = configuration.storagePath + '/' + destName;
+			const { fileKey, deleteKey } = storeFile(sourceFilepath, sourceFilename);
 
-			fs.writeFileSync(destPath, fs.readFileSync(source));
-			fs.unlinkSync(source);
-			var deleteKey = randomString(16);
-			fs.writeFileSync(destPath+'.meta', JSON.stringify({
-				filename: sourceName,
-				deleteKey: deleteKey
-			}));
-
-			var _html = uploadedHtml.toString().replace(/%URL%/g, '/'+destName).replace(/%DELETE_URL%/g, '/'+destName+'/'+deleteKey);
+			const _html = uploadedHtml.toString().replace(/%FILEKEY%/g, fileKey).replace(/%DELETEKEY%/g, deleteKey);
 			sendHtml(res, 200, _html);
 		});
 
 		return;
 
-	} else if (req.url==configuration.uploadFormPath) {
+	} else if (urlParsed.pathname == configuration.uploadFormPath) {
 		sendHtml(res, 200, uploadHtml); 
 		return;
 
-	} else if (req.url=='/') {
+	} else if (urlParsed.pathname == '/') {
 		sendHtml(res, 200, indexHtml);
 		return;
 
-	} else if (req.url.length==12) {
-		var id = req.url.substr(1,100).replace(/\//g, '');
-		var filePath = configuration.storagePath+'/'+id;
-		if (fs.existsSync(filePath)) {
-			var meta = JSON.parse(fs.readFileSync(filePath+'.meta').toString());
+	} else if (urlParsed.pathname.startsWith('/d/')) {
+		let result = null;
 
-			var stat = fs.statSync(filePath);
+		result = extractFileKeyFromURL(urlParsed.pathname);
+		if (!result) {
+			sendNotFound(res);
+			return;
+		}
+
+		const { fileKey, deleteKey } = result;
+
+		result = findFileByKey(fileKey);
+		if (!result) {
+			sendNotFound(res);
+			return;
+		}
+
+		const { filename, downloadFilename } = result;
+
+		const fullPath = path.join(configuration.storagePath, filename);
+
+		if (deleteKey) {
+			const referenceDeleteKey = calculateHashFromFilename(filename);
+			if (referenceDeleteKey != deleteKey) {
+				sendNotFound(res);
+				return;
+			}
+
+			if (urlParsed.query.dl) {
+				fs.unlinkSync(fullPath);
+				sendHtml(res, 200, deletedHtml);
+
+			} else {
+				const _html = deleteHtml.toString().replace(/%FILEKEY%/g, fileKey).replace(/%DELETEKEY%/g, deleteKey);
+				sendHtml(res, 200, _html);
+			}
+
+			return;
+		}
+
+		if (urlParsed.query.dl) {
+			const stat = fs.statSync(fullPath);
 
 			res.writeHead(200, {
 				'content-type': 'application/octet-stream',
-				'content-disposition': 'attachment; filename="' + meta.filename + '"',
+				'content-disposition': 'attachment; filename*=UTF-8\'\'' + downloadFilename,
 				'content-length': stat.size
 			});
-			res.end(fs.readFileSync(filePath));
-		} else { 
-			sendNotFound(res);
+			res.end(fs.readFileSync(fullPath));
+
+		} else {
+			const _html = downloadHtml.toString().replace(/%KEY%/g, fileKey);
+			sendHtml(res, 200, _html);
 		}
 
 		return;
-
-	} else if (req.url.length==29) {
-		var id = req.url.substr(1,11).replace(/\//g, '');
-		var deleteKey = req.url.substr(13,16);
-
-		var filePath = configuration.storagePath+'/'+id;
-		if (fs.existsSync(filePath)) {
-			try {
-				var meta = JSON.parse(fs.readFileSync(filePath+'.meta').toString());
-				if (meta.deleteKey == deleteKey) {
-					fs.unlinkSync(filePath+'.meta');
-					fs.unlinkSync(filePath);
-					sendHtml(res, 200, deletedHtml);
-					return;
-				} 
-			} catch (e) {
-			}
-		}
-
-		sendNotFound(res);
-		return;
-
-	} else { 
-		sendNotFound(res);
-		return;
+	
 	}
+
+	sendNotFound(res);
 }).listen(configuration.webPort);
 
 setInterval(expireFiles, 10000);

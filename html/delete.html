@@ -1,6 +1,6 @@
 <html>
 	<head>
-		<title>Simple uploader</title>
+		<title>File delete</title>
 		<style>
 			body {
 				font-family: sans-serif;
@@ -8,6 +8,10 @@
 				padding: 0px;
 			}
 
+			a:visited {
+				color: blue;
+			}
+			
 			.center {
 				padding-top: 10%;
 				text-align: center;
@@ -16,10 +20,7 @@
 	</head>
 	<body>
 		<div class="center">
-			<form action="/upload" enctype="multipart/form-data" method="post">
-				<input type="file" name="upload" multiple="multiple"> 
-				<input type="submit" value="Upload">
-			</form>
+			<a href="/d/%FILEKEY%/%DELETEKEY%?dl=1">Delete?</a>
 		</div>
 	</body>
 </html>
