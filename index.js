@@ -23,6 +23,18 @@ const configuration = {
 	deleteKeySecret: 'jkdghskzbvgndrv'
 };
 
+function compareStrings(a,b) {
+	const len = Math.max(a.length,b.length);
+
+	const bufferA = Buffer.alloc(len);
+	bufferA.write(a);
+
+	const bufferB = Buffer.alloc(len);
+	bufferB.write(b);
+
+	return crypto.timingSafeEqual(bufferA, bufferB);
+}
+
 function randomString(len) {
 	let text = "";
 	const possible = "123456789";
@@ -100,7 +112,7 @@ function storeFile(sourcePath, filename) {
 }
 
 function extractFileKeyFromURL(url) {
-	const elements = url.substr(1,102400).split('/');
+	const elements = url.replace(/\/$/, '').substr(1,102400).split('/');
 
 	elements.shift(); // remove "/d/";
 	if (elements.length==0) {
@@ -126,11 +138,14 @@ function extractFileKeyFromURL(url) {
 
 function findFileByKey(key) {
 	const _filenamePrefix = key + '-';
+	const prefixLen = _filenamePrefix.length;
 	const files = fs.readdirSync(configuration.storagePath).filter(name => {
-		return name.startsWith(_filenamePrefix);
+		if (compareStrings(name.substr(0,prefixLen), _filenamePrefix)) {
+			return true;
+		}
 	});
 
-	if (files.length==0) {
+	if (files.length!=1) {
 		return null;
 	}
 
@@ -145,7 +160,6 @@ function findFileByKey(key) {
 if (!fs.existsSync(configuration.storagePath)) {
 	fs.mkdirSync(configuration.storagePath);
 }
-
 
 http.createServer((req, res) => {
 	const urlParsed = urlModule.parse(req.url, true);
@@ -201,7 +215,7 @@ http.createServer((req, res) => {
 
 		if (deleteKey) {
 			const referenceDeleteKey = calculateHashFromFilename(filename);
-			if (referenceDeleteKey != deleteKey) {
+			if (!compareStrings(referenceDeleteKey, deleteKey)) {
 				sendNotFound(res);
 				return;
 			}
