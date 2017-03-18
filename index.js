@@ -1,7 +1,9 @@
 'use strict';
 
 const 
+	https = require('https'),
 	http = require('http'),
+	spdy = require('spdy'),
 	path = require('path'),
 	urlModule = require('url'),
 	fs = require('fs'),
@@ -15,13 +17,21 @@ const configuration = {
 	// web port to bind to
 	webPort: 3000,
 
-	// if you want your file sharing service to be private - you can specify the URL of the hidden upload form URL here. Otherwise set to '/'
-	uploadFormPath: '/upload',
+	expireFilesAfterSeconds: 14400, // four hours
 
-	expireFilesAfterSeconds: 86400,
+	deleteKeySecret: 'jkdghskzbvgndrv',
 
-	deleteKeySecret: 'jkdghskzbvgndrv'
+	min: 100000000,
+	max: 999999999
 };
+
+const indexHtml    = fs.readFileSync(path.join(__dirname, 'html/index.html'));
+const downloadHtml = fs.readFileSync(path.join(__dirname, 'html/download.html'));
+const uploadHtml   = fs.readFileSync(path.join(__dirname, 'html/upload.html'));
+const uploadedHtml = fs.readFileSync(path.join(__dirname, 'html/uploaded.html'));
+const notFoundHtml = fs.readFileSync(path.join(__dirname, 'html/404.html'));
+const deleteHtml   = fs.readFileSync(path.join(__dirname, 'html/delete.html'));
+const deletedHtml  = fs.readFileSync(path.join(__dirname, 'html/deleted.html'));
 
 function compareStrings(a,b) {
 	const len = Math.max(a.length,b.length);
@@ -68,14 +78,6 @@ function expireFiles() {
 	});
 }
 
-const indexHtml    = fs.readFileSync(path.join(__dirname, 'html/index.html'));
-const downloadHtml = fs.readFileSync(path.join(__dirname, 'html/download.html'));
-const uploadHtml   = fs.readFileSync(path.join(__dirname, 'html/upload.html'));
-const uploadedHtml = fs.readFileSync(path.join(__dirname, 'html/uploaded.html'));
-const notFoundHtml = fs.readFileSync(path.join(__dirname, 'html/404.html'));
-const deleteHtml   = fs.readFileSync(path.join(__dirname, 'html/delete.html'));
-const deletedHtml  = fs.readFileSync(path.join(__dirname, 'html/deleted.html'));
-
 function sendHtml(res, httpStatus, html) {
 	res.writeHead(httpStatus, {
 		'content-type': 'text/html; charset=utf-8',
@@ -112,7 +114,7 @@ function storeFile(sourcePath, filename) {
 }
 
 function extractFileKeyFromURL(url) {
-	const elements = url.replace(/\/$/, '').substr(1,102400).split('/');
+	const elements = url.replace(/\/$/, '').replace(/-/g, '').substr(1,102400).split('/');
 
 	elements.shift(); // remove "/d/";
 	if (elements.length==0) {
@@ -121,7 +123,11 @@ function extractFileKeyFromURL(url) {
 
 	const fileKey = parseInt(elements[0], 10);
 
-	if (fileKey==0 || isNaN(fileKey) || fileKey<100000000 || fileKey>999999999999) {
+	if (fileKey==0 || isNaN(fileKey)) {
+		return null;
+	}
+
+	if (fileKey < configuration.min || fileKey > configuration.max) {
 		return null;
 	}
 
@@ -159,7 +165,7 @@ if (!fs.existsSync(configuration.storagePath)) {
 	fs.mkdirSync(configuration.storagePath);
 }
 
-http.createServer((req, res) => {
+function app(req, res) {
 	const urlParsed = urlModule.parse(req.url, true);
 
 	if (urlParsed.pathname == '/upload' && req.method.toLowerCase() == 'post') {
@@ -182,7 +188,7 @@ http.createServer((req, res) => {
 
 		return;
 
-	} else if (urlParsed.pathname == configuration.uploadFormPath) {
+	} else if (urlParsed.pathname == '/upload') {
 		sendHtml(res, 200, uploadHtml); 
 		return;
 
@@ -250,9 +256,20 @@ http.createServer((req, res) => {
 	}
 
 	sendNotFound(res);
-}).listen(configuration.webPort);
+}
 
-setInterval(expireFiles, 10000);
+const options = {
+	ca:      fs.readFileSync(path.join(__dirname, 'ssl', 'ca.pem')),
+	key:     fs.readFileSync(path.join(__dirname, 'ssl', 'key.pem')),
+	cert:    fs.readFileSync(path.join(__dirname, 'ssl', 'cert.pem')),
+	dhparam: fs.readFileSync(path.join(__dirname, 'ssl', 'dhparam.pem'))
+};
+
+spdy.createServer(options, app).listen(configuration.webPort);
+
+// https.createServer(options, app).listen(configuration.webPort);
+
+setInterval(expireFiles, 23423);
 
 console.log("Listening on port %d", configuration.webPort);
 
