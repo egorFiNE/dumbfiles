@@ -1,24 +1,26 @@
+<!DOCTYPE html>	
 <html>
 	<head>
 		<title>Simple uploader</title>
 		<style>
-			body {
+			html,body {
 				font-family: sans-serif;
 				margin: 0px;
 				padding: 0px;
+				height: 100%;
 			}
-
-			.center {
-				padding-top: 10%;
-				text-align: center;
+			div.center {
+				height: 100%; 
+				display:flex;
+				justify-content:center;
+				align-items:center;
 			}
 		</style>
 	</head>
 	<body>
 		<div class="center">
 			<form action="/upload" enctype="multipart/form-data" method="post">
-				<input type="file" name="upload" multiple="multiple"> 
-				<input type="submit" value="Upload">
+				<input type="file" id="file" name="upload" onchange="this.form.submit()"> 
 			</form>
 		</div>
 	</body>

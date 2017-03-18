@@ -1,29 +1,43 @@
+<!DOCTYPE html>	
 <html>
 	<head>
 		<title>File uploaded</title>
 		<style>
-			body {
+			html,body {
 				font-family: sans-serif;
 				margin: 0px;
 				padding: 0px;
+				height: 100%;
 			}
 
-			a:visited {
+			a, a:visited {
 				color: blue;
 			}
-			
-			.center {
-				padding-top: 10%;
-				text-align: center;
-			}
-			.line {
-				width: 400px;
-			}
+
 			.label {
 				text-align: right;
 				padding-right: 10px;
 				font-size: 90%;
 			}
+
+			div.center {
+				height: 100%; 
+				display:flex;
+				justify-content:center;
+				align-items:center;
+			}
+			
+			div.container {
+				display: block;		
+				width: 100%;
+				clear: both;
+				margin-bottom: 20px;
+			}
+
+			button {
+				margin: 5px 0 0 0;
+			}
+
 		</style>
 		<script>
 		// clipboardjs
@@ -31,21 +45,43 @@
 		</script>
 	</head>
 	<body>
-		<div class="center">
-		<table style="margin-left: auto; margin-right: auto;">
-		<tr>
-			<td class="label" id="downloadLink"></td>
-			<td><button data-clipboard-target="#downloadLink">Copy</button></td>
-		</tr>
-		<tr>
-			<td class="label"  id="deleteLink"></td>
-			<td><button data-clipboard-target="#deleteLink">Copy</button>
-		</tr>
-		</table>
+		<div style="display:flex;justify-content:center;align-items:center; height: 100%">
+			<div>
+				<div class="container">
+					<span id="fileKey"></span>
+					<br/>
+					<button data-clipboard-target="#fileKey">Copy</button>
+				</div>
+
+				<div class="container">
+					<span id="downloadLink"></span>
+					<br/>
+					<button data-clipboard-target="#downloadLink">Copy</button>
+				</div>
+
+				<div class="container">
+					<span id="deleteLink"></span>
+					<br/>
+					<button data-clipboard-target="#deleteLink">Copy</button>
+				</div>
+
+				<div class="container">
+					<a href="/upload">Upload more?</a>
+				</div>
+			</div>
 		</div>
 
-
 		<script>
+		function split(s) {
+			const r = [];
+			let _ = '';
+			while (_ = s.slice(0,3)) {
+				r.push(_);
+				s = s.slice(3,100);
+			}
+			return r.join('-');
+		}
+
 		new Clipboard('button');
 
 		var fileKey = '%FILEKEY%', deleteKey = '%DELETEKEY%';
@@ -54,6 +90,7 @@
 		downloadLink = host+'/d/'+fileKey;
 		deleteLink   = downloadLink+'/'+deleteKey;
 
+		document.getElementById('fileKey').innerHTML = split(fileKey);
 		document.getElementById('deleteLink').innerHTML = '<a href="'+deleteLink+'">'+deleteLink+'</a>';
 		document.getElementById('downloadLink').innerHTML = '<a href="'+downloadLink+'">'+downloadLink+'</a>';
 		</script>
