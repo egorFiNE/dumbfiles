@@ -140,9 +140,7 @@ function findFileByKey(key) {
 	const _filenamePrefix = key + '-';
 	const prefixLen = _filenamePrefix.length;
 	const files = fs.readdirSync(configuration.storagePath).filter(name => {
-		if (compareStrings(name.substr(0,prefixLen), _filenamePrefix)) {
-			return true;
-		}
+		return compareStrings(name.substr(0,prefixLen), _filenamePrefix);
 	});
 
 	if (files.length!=1) {
