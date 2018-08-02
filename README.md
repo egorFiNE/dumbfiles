@@ -1,4 +1,4 @@
-depricated and abandoned
+Deprecated and abandoned
 ========================
 
 This project has been abandoned. Use much better [Firefox Send](https://send.firefox.com/) instead. 
